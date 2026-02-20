@@ -1,0 +1,436 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epsilon Earth | Global Intelligence</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="icon" href="./ep-earth-lg.png">
+    <!-- Three.js for the 3D Globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <!-- Leaflet for the Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+
+        body {
+            font-family: 'Space+Grotesk', sans-serif;
+            background-color: #1a1412;
+            color: #e5d3c0;
+            overflow-x: hidden;
+        }
+
+        .brown-glass {
+            background: rgba(45, 34, 28, 0.7);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(139, 94, 60, 0.2);
+        }
+
+        #map {
+            height: 400px;
+            border-radius: 1.5rem;
+            width: 100%;
+        }
+
+        #globe-container {
+            height: 350px;
+            cursor: grab;
+            width: 100%;
+        }
+
+        @media (min-width: 1024px) {
+            #map {
+                height: 550px;
+            }
+
+            #globe-container {
+                height: 500px;
+            }
+        }
+
+        .view {
+            display: none;
+            animation: fadeIn 0.4s ease-out;
+        }
+
+        .view.active {
+            display: block;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .nav-btn.active {
+            background: #8b5e3c;
+            color: white;
+            box-shadow: 0 0 15px rgba(139, 94, 60, 0.4);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #8b5e3c;
+            border-radius: 10px;
+        }
+    </style>
+</head>
+
+<body class="min-h-screen custom-scrollbar pb-24 lg:pb-0">
+
+    <!-- Navigation: Sidebar on Desktop, Bottom Bar on Mobile -->
+    <nav
+        class="fixed bottom-0 left-0 w-full h-20 lg:h-full lg:w-20 brown-glass flex flex-row lg:flex-col items-center justify-around lg:justify-start py-0 lg:py-8 gap-0 lg:gap-8 z-50 border-t lg:border-t-0 lg:border-r border-amber-900/30">
+        <div
+            class="hidden lg:flex w-12 h-12 bg-amber-700 rounded-xl items-center justify-center shadow-lg shadow-amber-900/50 mb-4">
+            <span class="text-2xl font-bold text-white">E</span>
+        </div>
+
+        <button onclick="switchView('dashboard')" id="btn-dashboard"
+            class="nav-btn p-3 rounded-xl text-amber-400/50 hover:bg-amber-700/30 transition-all active">
+            <i data-lucide="layout-dashboard"></i>
+            <span class="block lg:hidden text-[10px] mt-1 font-bold">Dash</span>
+        </button>
+        <button onclick="switchView('globe')" id="btn-globe"
+            class="nav-btn p-3 rounded-xl text-amber-400/50 hover:bg-amber-700/30 transition-all">
+            <i data-lucide="globe"></i>
+            <span class="block lg:hidden text-[10px] mt-1 font-bold">3D</span>
+        </button>
+        <button onclick="switchView('map-view')" id="btn-map-view"
+            class="nav-btn p-3 rounded-xl text-amber-400/50 hover:bg-amber-700/30 transition-all">
+            <i data-lucide="map"></i>
+            <span class="block lg:hidden text-[10px] mt-1 font-bold">Map</span>
+        </button>
+        <button onclick="switchView('network')" id="btn-network"
+            class="nav-btn p-3 rounded-xl text-amber-400/50 hover:bg-amber-700/30 transition-all">
+            <i data-lucide="users"></i>
+            <span class="block lg:hidden text-[10px] mt-1 font-bold">Staff</span>
+        </button>
+
+        <div class="hidden lg:flex mt-auto">
+            <div title="Warren"
+                class="w-10 h-10 rounded-full bg-amber-900 flex items-center justify-center text-xs font-bold border border-amber-600 cursor-pointer">
+                W
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main class="lg:pl-24 px-4 lg:pr-6 py-6 lg:py-8 max-w-7xl mx-auto">
+        <!-- Universal Header -->
+        <header class="flex flex-col md:flex-row justify-between items-start md:items-end mb-8 gap-4">
+            <div>
+                <div class="flex items-center gap-2 lg:hidden mb-2">
+                    <div class="w-8 h-8 bg-amber-700 rounded-lg flex items-center justify-center">
+                        <span class="text-lg font-bold text-white">E</span>
+                    </div>
+                    <span class="font-bold tracking-widest text-amber-500">EPSILON</span>
+                </div>
+                <h1 id="view-title" class="text-3xl lg:text-4xl font-bold text-amber-50 capitalize">Dashboard</h1>
+                <p class="text-amber-200/60 mt-1 text-sm">Global Intelligence Hub</p>
+            </div>
+            <div class="brown-glass px-4 py-2 rounded-xl flex items-center gap-3 w-full md:w-auto justify-center">
+                <i data-lucide="clock" class="w-4 h-4 text-amber-500"></i>
+                <span id="current-time" class="text-sm font-mono">00:00:00 UTC</span>
+            </div>
+        </header>
+
+        <!-- VIEW: DASHBOARD -->
+        <div id="view-dashboard" class="view active">
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 lg:gap-6 mb-8">
+                <!-- Analytics Cards -->
+                <div class="brown-glass p-4 lg:p-6 rounded-2xl border-l-4 border-amber-600">
+                    <div class="flex justify-between items-start">
+                        <p class="text-amber-200/60 text-xs lg:text-sm">Global Temp</p>
+                        <i data-lucide="thermometer" class="w-4 h-4 text-amber-500"></i>
+                    </div>
+                    <h2 class="text-xl lg:text-3xl font-bold mt-2">14.8°C</h2>
+                    <p class="text-[10px] text-red-400 mt-1">↑ 0.02%</p>
+                </div>
+                <div class="brown-glass p-4 lg:p-6 rounded-2xl border-l-4 border-blue-600">
+                    <div class="flex justify-between items-start">
+                        <p class="text-amber-200/60 text-xs lg:text-sm">Ocean Hyd.</p>
+                        <i data-lucide="droplets" class="w-4 h-4 text-blue-500"></i>
+                    </div>
+                    <h2 class="text-xl lg:text-3xl font-bold mt-2">97.2%</h2>
+                    <p class="text-[10px] text-blue-400 mt-1">Stable</p>
+                </div>
+                <div class="brown-glass p-4 lg:p-6 rounded-2xl border-l-4 border-green-600">
+                    <div class="flex justify-between items-start">
+                        <p class="text-amber-200/60 text-xs lg:text-sm">Forest</p>
+                        <i data-lucide="trees" class="w-4 h-4 text-green-500"></i>
+                    </div>
+                    <h2 class="text-xl lg:text-3xl font-bold mt-2">31.0%</h2>
+                    <p class="text-[10px] text-green-400 mt-1">Restoring</p>
+                </div>
+                <div class="brown-glass p-4 lg:p-6 rounded-2xl border-l-4 border-purple-600">
+                    <div class="flex justify-between items-start">
+                        <p class="text-amber-200/60 text-xs lg:text-sm">Nodes</p>
+                        <i data-lucide="zap" class="w-4 h-4 text-purple-500"></i>
+                    </div>
+                    <h2 class="text-xl lg:text-3xl font-bold mt-2">99.9%</h2>
+                    <p class="text-[10px] text-purple-400 mt-1">Active</p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div class="lg:col-span-2 brown-glass p-5 lg:p-6 rounded-2xl">
+                    <h3 class="text-lg font-bold mb-4 flex items-center gap-2 text-amber-100">
+                        <i data-lucide="activity" class="text-amber-500"></i> Regional Activity
+                    </h3>
+                    <div class="space-y-3">
+                        <div
+                            class="flex items-center justify-between p-3 lg:p-4 bg-amber-900/10 rounded-xl border border-amber-800/20">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 lg:w-10 lg:h-10 bg-amber-800/40 rounded-full flex items-center justify-center font-bold text-xs">
+                                    KE</div>
+                                <div>
+                                    <p class="font-medium text-sm lg:text-base">Nairobi HQ</p>
+                                    <p class="text-[10px] text-amber-200/40">Primary Node</p>
+                                </div>
+                            </div>
+                            <span class="text-green-500 text-xs font-bold">OPTIMAL</span>
+                        </div>
+                        <div
+                            class="flex items-center justify-between p-3 lg:p-4 bg-amber-900/10 rounded-xl border border-amber-800/20">
+                            <div class="flex items-center gap-3">
+                                <div
+                                    class="w-8 h-8 lg:w-10 lg:h-10 bg-amber-800/40 rounded-full flex items-center justify-center font-bold text-xs">
+                                    US</div>
+                                <div>
+                                    <p class="font-medium text-sm lg:text-base">NYC Relay</p>
+                                    <p class="text-[10px] text-amber-200/40">Satellite Link</p>
+                                </div>
+                            </div>
+                            <span class="text-amber-500 text-xs font-bold">BUSY</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="brown-glass p-6 rounded-2xl flex flex-col justify-center">
+                    <h3 class="text-lg font-bold mb-4 text-amber-100">Local Atmos</h3>
+                    <div class="text-center py-4">
+                        <div class="text-5xl lg:text-6xl font-bold text-amber-50" id="dash-temp">24°C</div>
+                        <p class="text-amber-400/80 mt-2 text-sm">Nairobi, KE</p>
+                        <div class="mt-6 flex justify-around border-t border-amber-800/20 pt-4">
+                            <div class="text-center">
+                                <p class="text-[10px] text-amber-200/40 uppercase">Wind</p>
+                                <p class="font-bold text-sm">12km/h</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-[10px] text-amber-200/40 uppercase">Press</p>
+                                <p class="font-bold text-sm">1012 hPa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: GLOBE -->
+        <div id="view-globe" class="view">
+            <div
+                class="brown-glass rounded-3xl p-4 lg:p-8 relative overflow-hidden min-h-[450px] lg:h-[600px] flex flex-col">
+                <div class="mb-4">
+                    <h3 class="text-xl lg:text-2xl font-bold">Terrestrial Visualizer</h3>
+                    <p class="text-amber-400/60 text-xs">3D Neural Projection • Epsilon V.1</p>
+                </div>
+                <div id="globe-container" class="flex-1"></div>
+                <div class="mt-4 flex flex-wrap gap-2 justify-center lg:justify-end">
+                    <button
+                        class="px-4 py-2 bg-amber-900/40 rounded-lg text-[10px] border border-amber-700/30 uppercase font-bold tracking-widest">Toggle
+                        Axis</button>
+                    <button
+                        class="px-4 py-2 bg-amber-700 text-white rounded-lg text-[10px] font-black uppercase tracking-widest shadow-lg shadow-amber-900/40">Sync
+                        Satellite</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW: MAP -->
+        <div id="view-map-view" class="view">
+            <div class="brown-glass rounded-3xl p-3 lg:p-4 overflow-hidden">
+                <div class="flex flex-col md:flex-row gap-3 mb-4">
+                    <div class="relative flex-1">
+                        <i data-lucide="search"
+                            class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600"></i>
+                        <input type="text" placeholder="Coordinates..."
+                            class="w-full bg-amber-950/40 border border-amber-800/50 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:border-amber-500 transition-all">
+                    </div>
+                    <button class="bg-amber-700 px-6 py-3 rounded-xl font-bold text-sm uppercase tracking-widest">Scan
+                        Region</button>
+                </div>
+                <div id="map"></div>
+            </div>
+        </div>
+
+        <!-- VIEW: NETWORK -->
+        <div id="view-network" class="view">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="text-xl font-bold">Epsilon Executive Board</h3>
+                <span
+                    class="text-[10px] bg-green-900/40 text-green-400 px-2 py-1 rounded border border-green-800/30 font-bold uppercase">9
+                    Online</span>
+            </div>
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4" id="admin-grid">
+                <!-- Admins injected here -->
+            </div>
+        </div>
+
+        <footer
+            class="mt-12 text-center text-amber-900 text-[10px] font-black opacity-30 tracking-[0.3em] uppercase mb-8 lg:mb-0">
+            SYSTEM_EPSILON // TERRA_CORE // WARREN_ARCHIVE_2026
+        </footer>
+    </main>
+
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Admin Data (The Squad)
+        const admins = [
+            { name: "Warren", role: "Chief Architect", status: "online" },
+            { name: "Glenn", role: "Systems Admin", status: "online" },
+            { name: "Jaydon", role: "Database Lead", status: "online" },
+            { name: "Dylan", role: "UI Strategist", status: "online" },
+            { name: "Victor", role: "Security Eng", status: "away" },
+            { name: "Ethan", role: "Cloud Dev", status: "online" },
+            { name: "Richard", role: "Analytics Lead", status: "online" },
+            { name: "Philip", role: "Hardware Specialist", status: "online" },
+            { name: "Franci", role: "Logic Designer", status: "online" }
+        ];
+
+        function renderAdmins() {
+            const grid = document.getElementById('admin-grid');
+            grid.innerHTML = admins.map(admin => `
+                <div class="brown-glass p-4 lg:p-6 rounded-2xl flex items-center gap-4 border border-amber-900/20 hover:border-amber-500/50 transition-all cursor-pointer group">
+                    <div class="w-10 h-10 lg:w-12 lg:h-12 rounded-xl bg-amber-900/50 flex items-center justify-center font-bold text-amber-400 group-hover:bg-amber-700 group-hover:text-white transition-all shadow-inner">
+                        ${admin.name[0]}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center mb-0.5">
+                            <h4 class="font-bold text-amber-50 truncate">${admin.name}</h4>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 ${admin.status === 'online' ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : (admin.status === 'away' ? 'bg-amber-500' : 'bg-gray-600')}"></span>
+                        </div>
+                        <p class="text-[10px] text-amber-200/40 uppercase font-bold tracking-wider truncate">${admin.role}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // View Switching Logic
+        function switchView(viewId) {
+            document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+            document.getElementById(`view-${viewId}`).classList.add('active');
+
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            document.getElementById(`btn-${viewId}`).classList.add('active');
+
+            const titleMap = {
+                'dashboard': 'Global Dashboard',
+                'globe': '3D Projection',
+                'map-view': 'Geographic Intel',
+                'network': 'Executive Network'
+            };
+            document.getElementById('view-title').innerText = titleMap[viewId] || viewId;
+
+            if (viewId === 'map-view' && map) {
+                setTimeout(() => map.invalidateSize(), 300);
+            }
+
+            // Scroll to top on view change for mobile
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        // Time Update
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toISOString().split('T')[1].split('.')[0] + ' UTC';
+        }, 1000);
+
+        // Three.js Globe
+        let scene, camera, renderer, globe;
+        function initGlobe() {
+            const container = document.getElementById('globe-container');
+            if (!container) return;
+
+            scene = new THREE.Scene();
+            camera = new THREE.PerspectiveCamera(75, container.clientWidth / container.clientHeight, 0.1, 1000);
+            renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            container.appendChild(renderer.domElement);
+
+            const geometry = new THREE.SphereGeometry(2, 48, 48);
+            const material = new THREE.MeshPhongMaterial({
+                color: 0x8b5e3c,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.6,
+                emissive: 0x3d2b1f
+            });
+            globe = new THREE.Mesh(geometry, material);
+            scene.add(globe);
+
+            const light = new THREE.PointLight(0xffffff, 1.2);
+            light.position.set(10, 10, 10);
+            scene.add(light);
+            scene.add(new THREE.AmbientLight(0x404040, 0.5));
+
+            camera.position.z = 4.2;
+
+            function animate() {
+                requestAnimationFrame(animate);
+                if (globe) globe.rotation.y += 0.002;
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+        }
+
+        // Leaflet Map
+        let map;
+        function initMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            map = L.map('map', { zoomControl: false }).setView([-1.2921, 36.8219], 13);
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png').addTo(map);
+            L.circleMarker([-1.2921, 36.8219], {
+                color: '#8b5e3c',
+                fillColor: '#d97706',
+                fillOpacity: 0.6,
+                radius: 12
+            }).addTo(map);
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+        }
+
+        window.onload = () => {
+            initGlobe();
+            initMap();
+            renderAdmins();
+        };
+    </script>
+</body>
+
+</html>
