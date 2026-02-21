@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Epsilon Earth | Global Intelligence</title>
+    <link rel="icon" href="" <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
+        rel="stylesheet">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        space: ['"Space Grotesk"', 'sans-serif'],
+                        inter: ['Inter', 'sans-serif'],
+                    },
+                    colors: {
+                        epsilon: {
+                            900: '#1a1412',
+                            800: '#2d221c',
+                            accent: '#8b5e3c',
+                            light: '#e5d3c0'
+                        }
+                    },
+                    backgroundImage: {
+                        'gradient-radial': 'radial-gradient(var(--tw-gradient-stops))',
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+
+    <!-- Three.js for 3D Globe -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
+    <!-- Leaflet for Map -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+
+    <style>
+        body {
+            background-color: #0a0808;
+            color: #e5d3c0;
+            overflow-x: hidden;
+        }
+
+        .glass-panel {
+            background: rgba(26, 20, 18, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(139, 94, 60, 0.15);
+        }
+
+        .glass-card {
+            background: linear-gradient(145deg, rgba(45, 34, 28, 0.4) 0%, rgba(26, 20, 18, 0.8) 100%);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 94, 60, 0.2);
+            transition: transform 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+        }
+
+        .glass-card:hover {
+            border-color: rgba(217, 119, 6, 0.5);
+            box-shadow: 0 10px 30px -10px rgba(217, 119, 6, 0.15);
+            transform: translateY(-5px);
+        }
+
+        .text-glow {
+            text-shadow: 0 0 20px rgba(217, 119, 6, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: #0a0808;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #4a3320;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #8b5e3c;
+        }
+
+        #map-container .leaflet-container {
+            background: #0a0808;
+            font-family: 'Inter', sans-serif;
+        }
+
+        .leaflet-bar a {
+            background-color: rgba(26, 20, 18, 0.8) !important;
+            color: #d97706 !important;
+            border-color: rgba(139, 94, 60, 0.3) !important;
+        }
+
+        .hero-bg {
+            background-image: url('https://images.unsplash.com/photo-1451187580459-43490279c0fa?q=80&w=2072&auto=format&fit=crop');
+            background-size: cover;
+            background-position: center;
+        }
+    </style>
+</head>
+
+<body class="font-inter antialiased selection:bg-amber-500/30 selection:text-amber-200">
+
+    <!-- Navigation -->
+    <nav class="fixed w-full z-50 transition-all duration-300 glass-panel border-b-0" id="navbar">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-20">
+                <!-- Logo -->
+                <div class="flex items-center gap-3 cursor-pointer">
+                    <div
+                        class="w-10 h-10 bg-gradient-to-br from-amber-600 to-amber-900 rounded-xl flex items-center justify-center shadow-[0_0_15px_rgba(217,119,6,0.3)]">
+                        <span class="text-xl font-space font-bold text-white">E</span>
+                    </div>
+                    <span class="font-space font-bold tracking-[0.2em] text-amber-50 hidden sm:block">EPSILON</span>
+                </div>
+
+                <!-- Desktop Menu -->
+                <div class="hidden md:flex items-center space-x-8">
+                    <a href="#features"
+                        class="text-sm font-medium text-amber-100/70 hover:text-amber-400 transition-colors">Capabilities</a>
+                    <a href="#visualizer"
+                        class="text-sm font-medium text-amber-100/70 hover:text-amber-400 transition-colors">Visualizer</a>
+                    <a href="#network"
+                        class="text-sm font-medium text-amber-100/70 hover:text-amber-400 transition-colors">Network</a>
+                </div>
+
+                <!-- CTA & Time -->
+                <div class="flex items-center gap-6">
+                    <div
+                        class="hidden lg:flex items-center gap-2 px-3 py-1.5 rounded-lg bg-black/40 border border-amber-900/50">
+                        <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-500"></i>
+                        <span id="current-time" class="text-xs font-mono text-amber-200/80">00:00:00 UTC</span>
+                    </div>
+                    <a href="#pricing"
+                        class="px-6 py-2.5 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-space font-semibold text-sm transition-all shadow-[0_0_20px_rgba(217,119,6,0.2)] hover:shadow-[0_0_25px_rgba(217,119,6,0.4)]">
+                        Access Terminal
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero Section -->
+    <section class="relative pt-32 pb-20 lg:pt-48 lg:pb-32 overflow-hidden min-h-[90vh] flex items-center">
+        <!-- Background Image with Overlays -->
+        <div class="absolute inset-0 hero-bg"></div>
+        <div class="absolute inset-0 bg-gradient-to-b from-epsilon-900/90 via-epsilon-900/80 to-[#0a0808]"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(217,119,6,0.1)_0%,transparent_60%)]">
+        </div>
+
+        <div class="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 text-center z-10">
+            <div
+                class="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-amber-500/30 bg-amber-500/10 backdrop-blur-md mb-8">
+                <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                <span class="text-xs font-space font-medium tracking-widest text-amber-200 uppercase">System Online •
+                    V.1 Active</span>
+            </div>
+
+            <h1 class="text-5xl md:text-7xl lg:text-8xl font-space font-bold tracking-tight mb-6 text-white">
+                Global Intelligence <br />
+                <span class="text-transparent bg-clip-text bg-gradient-to-r from-amber-400 to-amber-700 text-glow">At
+                    Your Fingertips</span>
+            </h1>
+
+            <p class="mt-6 max-w-2xl mx-auto text-lg md:text-xl text-amber-100/60 font-light leading-relaxed">
+                Monitor Earth's vital signs in real-time. Epsilon Earth provides unparalleled planetary telemetry,
+                atmospheric data, and executive network access in one unified dashboard.
+            </p>
+
+            <div class="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+                <a href="#visualizer"
+                    class="px-8 py-4 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-space font-bold text-lg transition-all shadow-[0_0_30px_rgba(217,119,6,0.3)] hover:shadow-[0_0_40px_rgba(217,119,6,0.5)] flex items-center justify-center gap-2">
+                    <i data-lucide="globe" class="w-5 h-5"></i> Initialize Visualizer
+                </a>
+                <a href="#features"
+                    class="px-8 py-4 rounded-xl glass-panel text-amber-100 hover:text-white hover:bg-white/5 font-space font-bold text-lg transition-all flex items-center justify-center gap-2 border border-amber-500/30">
+                    <i data-lucide="activity" class="w-5 h-5"></i> View Capabilities
+                </a>
+            </div>
+        </div>
+    </section>
+
+    <!-- Live Stats Bar (Pulled from original dashboard) -->
+    <div class="relative z-20 -mt-16 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div
+            class="glass-panel rounded-2xl p-6 lg:p-8 grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10 border border-amber-500/20 shadow-2xl">
+            <div class="flex flex-col border-l-2 border-amber-600/50 pl-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="thermometer" class="w-4 h-4 text-amber-500"></i>
+                    <p class="text-amber-100/50 text-xs font-space uppercase tracking-wider">Global Temp</p>
+                </div>
+                <h3 class="text-2xl lg:text-3xl font-space font-bold text-white">14.8°C</h3>
+                <p class="text-[10px] text-red-400 font-mono mt-1">↑ 0.02% VARIANCE</p>
+            </div>
+            <div class="flex flex-col border-l-2 border-blue-600/50 pl-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="droplets" class="w-4 h-4 text-blue-500"></i>
+                    <p class="text-amber-100/50 text-xs font-space uppercase tracking-wider">Ocean Hydration</p>
+                </div>
+                <h3 class="text-2xl lg:text-3xl font-space font-bold text-white">97.2%</h3>
+                <p class="text-[10px] text-blue-400 font-mono mt-1">STABLE METRIC</p>
+            </div>
+            <div class="flex flex-col border-l-2 border-green-600/50 pl-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="trees" class="w-4 h-4 text-green-500"></i>
+                    <p class="text-amber-100/50 text-xs font-space uppercase tracking-wider">Forest Cover</p>
+                </div>
+                <h3 class="text-2xl lg:text-3xl font-space font-bold text-white">31.0%</h3>
+                <p class="text-[10px] text-green-400 font-mono mt-1">RESTORING TREND</p>
+            </div>
+            <div class="flex flex-col border-l-2 border-purple-600/50 pl-4">
+                <div class="flex items-center gap-2 mb-1">
+                    <i data-lucide="zap" class="w-4 h-4 text-purple-500"></i>
+                    <p class="text-amber-100/50 text-xs font-space uppercase tracking-wider">Node Uptime</p>
+                </div>
+                <h3 class="text-2xl lg:text-3xl font-space font-bold text-white">99.9%</h3>
+                <p class="text-[10px] text-purple-400 font-mono mt-1">NETWORK OPTIMAL</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Features / Capabilities -->
+    <section id="features" class="py-24 relative">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="text-center max-w-3xl mx-auto mb-16">
+                <h2 class="text-amber-500 font-space font-semibold tracking-widest uppercase text-sm mb-3">Core
+                    Capabilities</h2>
+                <h3 class="text-3xl md:text-5xl font-space font-bold text-white mb-6">Omnipresent Monitoring</h3>
+                <p class="text-amber-100/60 font-light">Deploying a matrix of orbital and terrestrial sensors, Epsilon
+                    provides a god's-eye view of planetary mechanics.</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Feature 1 -->
+                <div class="glass-card p-8 rounded-2xl group">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-amber-900/50 border border-amber-500/30 flex items-center justify-center mb-6 group-hover:bg-amber-600 transition-colors">
+                        <i data-lucide="layout-dashboard" class="w-6 h-6 text-amber-400 group-hover:text-white"></i>
+                    </div>
+                    <h4 class="text-xl font-space font-bold text-white mb-3">Unified Dashboard</h4>
+                    <p class="text-sm text-amber-100/60 leading-relaxed">Aggregate global telemetry into a single,
+                        customizable interface. Monitor atmospheric pressure, wind speeds, and regional anomalies
+                        instantly.</p>
+                </div>
+
+                <!-- Feature 2 -->
+                <div class="glass-card p-8 rounded-2xl group">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-amber-900/50 border border-amber-500/30 flex items-center justify-center mb-6 group-hover:bg-amber-600 transition-colors">
+                        <i data-lucide="map" class="w-6 h-6 text-amber-400 group-hover:text-white"></i>
+                    </div>
+                    <h4 class="text-xl font-space font-bold text-white mb-3">Geographic Intel</h4>
+                    <p class="text-sm text-amber-100/60 leading-relaxed">Pinpoint coordinate tracking with our
+                        integrated dark-mode cartography. Scan regions and deploy assets with micrometer precision.</p>
+                </div>
+
+                <!-- Feature 3 -->
+                <div class="glass-card p-8 rounded-2xl group">
+                    <div
+                        class="w-14 h-14 rounded-xl bg-amber-900/50 border border-amber-500/30 flex items-center justify-center mb-6 group-hover:bg-amber-600 transition-colors">
+                        <i data-lucide="users" class="w-6 h-6 text-amber-400 group-hover:text-white"></i>
+                    </div>
+                    <h4 class="text-xl font-space font-bold text-white mb-3">Executive Network</h4>
+                    <p class="text-sm text-amber-100/60 leading-relaxed">Secure, encrypted communications with the
+                        Epsilon Executive Board. Monitor node status, agent locations, and deploy directives globally.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 3D Globe Visualizer Showcase -->
+    <section id="visualizer"
+        class="py-24 bg-gradient-to-b from-transparent to-epsilon-900/30 relative border-t border-amber-900/20">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col lg:flex-row items-center gap-12 lg:gap-20">
+
+                <!-- Text Content -->
+                <div class="w-full lg:w-5/12 space-y-8">
+                    <div>
+                        <div
+                            class="inline-flex items-center gap-2 px-3 py-1 rounded border border-amber-500/30 bg-amber-900/20 mb-4">
+                            <i data-lucide="cpu" class="w-4 h-4 text-amber-500"></i>
+                            <span
+                                class="text-[10px] font-space font-bold tracking-widest text-amber-400 uppercase">Neural
+                                Projection</span>
+                        </div>
+                        <h2 class="text-3xl md:text-5xl font-space font-bold text-white leading-tight">Terrestrial
+                            <br /><span class="text-amber-500">Visualizer</span></h2>
+                    </div>
+
+                    <p class="text-amber-100/60 font-light text-lg">
+                        Interact with Epsilon V.1's crown jewel. The 3D Neural Projection renders planetary data mapping
+                        in real-time, allowing operatives to visualize global networks, weather patterns, and node
+                        health.
+                    </p>
+
+                    <ul class="space-y-4">
+                        <li class="flex items-center gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-amber-900/50 flex items-center justify-center border border-amber-500/30">
+                                <i data-lucide="check" class="w-3 h-3 text-amber-400"></i>
+                            </div>
+                            <span class="text-sm text-amber-100/80">Interactive 360° Axis Control</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-amber-900/50 flex items-center justify-center border border-amber-500/30">
+                                <i data-lucide="check" class="w-3 h-3 text-amber-400"></i>
+                            </div>
+                            <span class="text-sm text-amber-100/80">Live Satellite Synchronization</span>
+                        </li>
+                        <li class="flex items-center gap-3">
+                            <div
+                                class="w-6 h-6 rounded-full bg-amber-900/50 flex items-center justify-center border border-amber-500/30">
+                                <i data-lucide="check" class="w-3 h-3 text-amber-400"></i>
+                            </div>
+                            <span class="text-sm text-amber-100/80">Wireframe Topological Rendering</span>
+                        </li>
+                    </ul>
+
+                    <div class="pt-4">
+                        <button
+                            class="px-6 py-3 bg-amber-900/40 rounded-xl text-xs border border-amber-700/50 uppercase font-space font-bold tracking-widest text-amber-200 hover:bg-amber-800/60 transition-colors flex items-center gap-2">
+                            <i data-lucide="refresh-cw" class="w-4 h-4"></i> Sync Satellite Data
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 3D Globe Container -->
+                <div class="w-full lg:w-7/12">
+                    <div
+                        class="glass-panel p-2 rounded-3xl border border-amber-500/20 shadow-[0_0_50px_rgba(139,94,60,0.1)] relative group">
+                        <!-- UI Overlays on Globe -->
+                        <div class="absolute top-6 left-6 z-10">
+                            <p class="font-mono text-[10px] text-amber-400/80">STATUS: RENDERING</p>
+                            <p class="font-mono text-[10px] text-amber-400/80">LAT/LONG: TRACKING</p>
+                        </div>
+                        <div class="absolute bottom-6 right-6 z-10 flex gap-2">
+                            <span class="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></span>
+                            <span class="w-2 h-2 rounded-full bg-amber-500/30"></span>
+                            <span class="w-2 h-2 rounded-full bg-amber-500/30"></span>
+                        </div>
+
+                        <!-- Actual Three.js Container -->
+                        <div id="globe-container"
+                            class="w-full h-[400px] lg:h-[600px] rounded-2xl overflow-hidden bg-black/50 cursor-grab active:cursor-grabbing">
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Map & Regional Intel -->
+    <section class="py-24 relative overflow-hidden">
+        <div
+            class="absolute inset-0 bg-[url('https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029&auto=format&fit=crop')] opacity-5 bg-cover bg-center mix-blend-overlay">
+        </div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex flex-col lg:flex-row gap-8 items-start">
+
+                <!-- Map Container -->
+                <div class="w-full lg:w-2/3 glass-panel p-4 rounded-3xl border border-amber-500/20">
+                    <div class="flex flex-col sm:flex-row gap-3 mb-4">
+                        <div class="relative flex-1">
+                            <i data-lucide="search"
+                                class="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-amber-600"></i>
+                            <input type="text" placeholder="Enter Coordinates or Region ID..."
+                                class="w-full bg-black/40 border border-amber-800/50 rounded-xl pl-12 pr-4 py-3 text-sm text-amber-100 focus:outline-none focus:border-amber-500 transition-all placeholder-amber-900/60 font-mono">
+                        </div>
+                        <button
+                            class="bg-amber-700 hover:bg-amber-600 px-6 py-3 rounded-xl font-space font-bold text-xs uppercase tracking-widest text-white transition-colors">
+                            Scan Region
+                        </button>
+                    </div>
+                    <div id="map" class="w-full h-[350px] lg:h-[450px] rounded-2xl z-0"></div>
+                </div>
+
+                <!-- Regional Activity Sidebar -->
+                <div class="w-full lg:w-1/3 space-y-6">
+                    <div class="glass-card p-6 rounded-3xl">
+                        <h3 class="text-lg font-space font-bold mb-6 flex items-center gap-2 text-white">
+                            <i data-lucide="activity" class="text-amber-500 w-5 h-5"></i> Regional Activity
+                        </h3>
+                        <div class="space-y-4">
+                            <!-- Node 1 -->
+                            <div
+                                class="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-amber-800/30">
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-10 h-10 bg-amber-900/60 rounded-full flex items-center justify-center font-space font-bold text-xs text-amber-400 border border-amber-700/50">
+                                        KE
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-amber-50">Nairobi HQ</p>
+                                        <p class="text-[10px] text-amber-200/50 font-mono">Primary Node</p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="text-green-500 text-[10px] font-space font-bold tracking-wider px-2 py-1 bg-green-500/10 rounded">OPTIMAL</span>
+                            </div>
+                            <!-- Node 2 -->
+                            <div
+                                class="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-amber-800/30">
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-10 h-10 bg-amber-900/60 rounded-full flex items-center justify-center font-space font-bold text-xs text-amber-400 border border-amber-700/50">
+                                        US
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-amber-50">NYC Relay</p>
+                                        <p class="text-[10px] text-amber-200/50 font-mono">Satellite Link</p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="text-amber-500 text-[10px] font-space font-bold tracking-wider px-2 py-1 bg-amber-500/10 rounded">BUSY</span>
+                            </div>
+                            <!-- Node 3 -->
+                            <div
+                                class="flex items-center justify-between p-4 bg-black/40 rounded-xl border border-amber-800/30">
+                                <div class="flex items-center gap-4">
+                                    <div
+                                        class="w-10 h-10 bg-amber-900/60 rounded-full flex items-center justify-center font-space font-bold text-xs text-amber-400 border border-amber-700/50">
+                                        JP
+                                    </div>
+                                    <div>
+                                        <p class="font-medium text-sm text-amber-50">Tokyo Hub</p>
+                                        <p class="text-[10px] text-amber-200/50 font-mono">Data Center</p>
+                                    </div>
+                                </div>
+                                <span
+                                    class="text-green-500 text-[10px] font-space font-bold tracking-wider px-2 py-1 bg-green-500/10 rounded">OPTIMAL</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="glass-card p-6 rounded-3xl">
+                        <h3 class="text-sm font-space font-bold text-amber-500 uppercase tracking-widest mb-4">Local
+                            Atmos</h3>
+                        <div class="flex justify-between items-end">
+                            <div>
+                                <div class="text-5xl font-space font-bold text-white tracking-tighter">24<span
+                                        class="text-3xl text-amber-500">°C</span></div>
+                                <p class="text-amber-100/50 text-xs mt-1 font-mono">Nairobi, KE</p>
+                            </div>
+                            <div class="text-right space-y-2">
+                                <div>
+                                    <p class="text-[10px] text-amber-200/40 uppercase font-space">Wind</p>
+                                    <p class="font-mono text-sm text-amber-100">12km/h</p>
+                                </div>
+                                <div>
+                                    <p class="text-[10px] text-amber-200/40 uppercase font-space">Pressure</p>
+                                    <p class="font-mono text-sm text-amber-100">1012 hPa</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- Network / Social Proof -->
+    <section id="network" class="py-24 border-t border-amber-900/20 bg-epsilon-900/50">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row justify-between items-end mb-12 gap-6">
+                <div>
+                    <h2 class="text-amber-500 font-space font-semibold tracking-widest uppercase text-sm mb-2">The Squad
+                    </h2>
+                    <h3 class="text-3xl md:text-4xl font-space font-bold text-white">Executive Board</h3>
+                </div>
+                <div class="flex items-center gap-3 glass-panel px-4 py-2 rounded-lg">
+                    <span class="relative flex h-3 w-3">
+                        <span
+                            class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+                    </span>
+                    <span class="text-xs font-space font-bold uppercase tracking-wider text-green-400">9 Operatives
+                        Online</span>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4" id="admin-grid">
+                <!-- Admins injected via JS -->
+            </div>
+        </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section id="pricing" class="py-32 relative overflow-hidden">
+        <div class="absolute inset-0 bg-amber-900/10"></div>
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_bottom,rgba(217,119,6,0.15)_0%,transparent_50%)]">
+        </div>
+
+        <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10 text-center">
+            <h2 class="text-4xl md:text-6xl font-space font-bold text-white mb-6">Initialize Your Protocol</h2>
+            <p class="text-lg text-amber-100/60 mb-10 max-w-2xl mx-auto">
+                Join the network of global operatives. Secure your access to the Epsilon V.1 dashboard and take command
+                of planetary intelligence.
+            </p>
+
+            <div
+                class="glass-card p-8 md:p-12 rounded-3xl border border-amber-500/30 max-w-2xl mx-auto backdrop-blur-xl">
+                <div class="flex flex-col md:flex-row justify-between items-center gap-8">
+                    <div class="text-left">
+                        <h4 class="text-2xl font-space font-bold text-white mb-2">Operative Access</h4>
+                        <p class="text-sm text-amber-100/60">Full dashboard, 3D visualizer, and map intel.</p>
+                    </div>
+                    <div class="text-left md:text-right">
+                        <div class="text-4xl font-space font-bold text-amber-500 mb-1">CLASSIFIED</div>
+                        <p class="text-xs text-amber-200/40 font-mono uppercase tracking-widest">Clearance Required</p>
+                    </div>
+                </div>
+                <div class="mt-8 pt-8 border-t border-amber-800/30">
+                    <a href="./site.html">
+                        <button
+                            class="w-full py-4 rounded-xl bg-gradient-to-r from-amber-700 to-amber-500 hover:from-amber-600 hover:to-amber-400 text-white font-space font-bold text-lg transition-all shadow-[0_0_20px_rgba(217,119,6,0.3)] hover:shadow-[0_0_30px_rgba(217,119,6,0.5)]">
+                            Enter
+                        </button>
+                    </a>
+                    <p class="text-[10px] text-amber-100/30 mt-4 font-mono uppercase tracking-widest text-center">
+                        Encrypted Connection // 256-bit AES
+                    </p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="border-t border-amber-900/30 bg-[#050404] py-12 relative overflow-hidden">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
+            <div class="flex flex-col md:flex-row justify-between items-center gap-6">
+                <div class="flex items-center gap-3 opacity-50">
+                    <div class="w-8 h-8 bg-amber-900 rounded-lg flex items-center justify-center">
+                        <span class="text-sm font-space font-bold text-amber-500">E</span>
+                    </div>
+                    <span class="font-space font-bold tracking-[0.2em] text-amber-500 text-sm">EPSILON EARTH</span>
+                </div>
+
+                <div class="text-center md:text-right">
+                    <p class="text-amber-900 text-[10px] font-black opacity-40 tracking-[0.3em] uppercase font-mono">
+                        SYSTEM_EPSILON // TERRA_CORE // WARREN_ARCHIVE_2026
+                    </p>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Icons
+        lucide.createIcons();
+
+        // Navbar Scroll Effect
+        window.addEventListener('scroll', () => {
+            const nav = document.getElementById('navbar');
+            if (window.scrollY > 50) {
+                nav.classList.add('bg-epsilon-900/90', 'shadow-lg', 'border-b', 'border-amber-900/30');
+                nav.classList.remove('border-b-0');
+            } else {
+                nav.classList.remove('bg-epsilon-900/90', 'shadow-lg', 'border-b', 'border-amber-900/30');
+                nav.classList.add('border-b-0');
+            }
+        });
+
+        // Time Update
+        setInterval(() => {
+            const now = new Date();
+            document.getElementById('current-time').innerText = now.toISOString().split('T')[1].split('.')[0] + ' UTC';
+        }, 1000);
+
+        // Admin Data (The Squad)
+        const admins = [
+            { name: "Warren", role: "Chief Architect", status: "online" },
+            { name: "Glenn", role: "Systems Admin", status: "online" },
+            { name: "Jaydon", role: "Database Lead", status: "online" },
+            { name: "Dylan", role: "UI Strategist", status: "online" },
+            { name: "Victor", role: "Security Eng", status: "away" },
+            { name: "Ethan", role: "Cloud Dev", status: "online" },
+            { name: "Richard", role: "Analytics Lead", status: "online" },
+            { name: "Philip", role: "Hardware Spec", status: "online" }
+        ];
+
+        function renderAdmins() {
+            const grid = document.getElementById('admin-grid');
+            grid.innerHTML = admins.map(admin => `
+                <div class="glass-card p-4 rounded-2xl flex items-center gap-4 cursor-pointer group">
+                    <div class="w-12 h-12 rounded-xl bg-black/50 border border-amber-900/50 flex items-center justify-center font-space font-bold text-lg text-amber-500 group-hover:bg-amber-600 group-hover:text-white transition-all shadow-inner relative overflow-hidden">
+                        <div class="absolute inset-0 bg-gradient-to-br from-white/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                        ${admin.name[0]}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex justify-between items-center mb-1">
+                            <h4 class="font-space font-bold text-white truncate text-sm">${admin.name}</h4>
+                            <span class="w-2 h-2 rounded-full flex-shrink-0 ${admin.status === 'online' ? 'bg-green-500 shadow-[0_0_8px_#22c55e]' : 'bg-amber-500 shadow-[0_0_8px_#f59e0b]'}"></span>
+                        </div>
+                        <p class="text-[10px] text-amber-200/50 uppercase font-mono tracking-wider truncate">${admin.role}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Three.js Globe Initialization
+        function initGlobe() {
+            const container = document.getElementById('globe-container');
+            if (!container) return;
+
+            const scene = new THREE.Scene();
+            const camera = new THREE.PerspectiveCamera(60, container.clientWidth / container.clientHeight, 0.1, 1000);
+            const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+
+            renderer.setSize(container.clientWidth, container.clientHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Globe Group to hold layers
+            const globeGroup = new THREE.Group();
+            scene.add(globeGroup);
+
+            // Base Sphere (Dark core)
+            const coreGeometry = new THREE.SphereGeometry(2, 64, 64);
+            const coreMaterial = new THREE.MeshPhongMaterial({
+                color: 0x1a1412,
+                emissive: 0x0a0808,
+                transparent: true,
+                opacity: 0.9
+            });
+            const core = new THREE.Mesh(coreGeometry, coreMaterial);
+            globeGroup.add(core);
+
+            // Wireframe outer layer
+            const wireGeometry = new THREE.SphereGeometry(2.02, 32, 32);
+            const wireMaterial = new THREE.MeshBasicMaterial({
+                color: 0xd97706, // Amber 600
+                wireframe: true,
+                transparent: true,
+                opacity: 0.15
+            });
+            const wireframe = new THREE.Mesh(wireGeometry, wireMaterial);
+            globeGroup.add(wireframe);
+
+            // Particles (Nodes)
+            const particleCount = 200;
+            const particleGeometry = new THREE.BufferGeometry();
+            const particlePositions = new Float32Array(particleCount * 3);
+
+            for (let i = 0; i < particleCount * 3; i += 3) {
+                // Random points on sphere surface
+                const u = Math.random();
+                const v = Math.random();
+                const theta = u * 2.0 * Math.PI;
+                const phi = Math.acos(2.0 * v - 1.0);
+                const r = 2.05; // Slightly above surface
+
+                particlePositions[i] = r * Math.sin(phi) * Math.cos(theta);
+                particlePositions[i + 1] = r * Math.sin(phi) * Math.sin(theta);
+                particlePositions[i + 2] = r * Math.cos(phi);
+            }
+
+            particleGeometry.setAttribute('position', new THREE.BufferAttribute(particlePositions, 3));
+            const particleMaterial = new THREE.PointsMaterial({
+                color: 0xf59e0b, // Amber 500
+                size: 0.03,
+                transparent: true,
+                opacity: 0.8
+            });
+            const particles = new THREE.Points(particleGeometry, particleMaterial);
+            globeGroup.add(particles);
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.2);
+            scene.add(ambientLight);
+
+            const pointLight = new THREE.PointLight(0xd97706, 2, 50);
+            pointLight.position.set(5, 3, 5);
+            scene.add(pointLight);
+
+            const pointLight2 = new THREE.PointLight(0x4a3320, 2, 50);
+            pointLight2.position.set(-5, -3, -5);
+            scene.add(pointLight2);
+
+            camera.position.z = 4.5;
+
+            // Interaction variables
+            let isDragging = false;
+            let previousMousePosition = { x: 0, y: 0 };
+
+            // Mouse events for rotation
+            container.addEventListener('mousedown', (e) => { isDragging = true; });
+            container.addEventListener('mousemove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.offsetX - previousMousePosition.x,
+                        y: e.offsetY - previousMousePosition.y
+                    };
+                    globeGroup.rotation.y += deltaMove.x * 0.005;
+                    globeGroup.rotation.x += deltaMove.y * 0.005;
+                }
+                previousMousePosition = { x: e.offsetX, y: e.offsetY };
+            });
+            document.addEventListener('mouseup', () => { isDragging = false; });
+
+            // Touch events
+            container.addEventListener('touchstart', (e) => {
+                isDragging = true;
+                previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            }, { passive: true });
+            container.addEventListener('touchmove', (e) => {
+                if (isDragging) {
+                    const deltaMove = {
+                        x: e.touches[0].clientX - previousMousePosition.x,
+                        y: e.touches[0].clientY - previousMousePosition.y
+                    };
+                    globeGroup.rotation.y += deltaMove.x * 0.005;
+                    globeGroup.rotation.x += deltaMove.y * 0.005;
+                    previousMousePosition = { x: e.touches[0].clientX, y: e.touches[0].clientY };
+                }
+            }, { passive: true });
+            document.addEventListener('touchend', () => { isDragging = false; });
+
+            // Animation Loop
+            function animate() {
+                requestAnimationFrame(animate);
+                if (!isDragging) {
+                    globeGroup.rotation.y += 0.001; // Auto rotation
+                }
+                // Slowly pulse particles
+                const time = Date.now() * 0.001;
+                particleMaterial.opacity = 0.5 + Math.sin(time * 2) * 0.3;
+
+                renderer.render(scene, camera);
+            }
+            animate();
+
+            // Handle Resize
+            window.addEventListener('resize', () => {
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                camera.aspect = w / h;
+                camera.updateProjectionMatrix();
+                renderer.setSize(w, h);
+            });
+        }
+
+        // Leaflet Map Initialization
+        function initMap() {
+            const mapContainer = document.getElementById('map');
+            if (!mapContainer) return;
+
+            // Initialize map with dark theme
+            const map = L.map('map', {
+                zoomControl: false,
+                attributionControl: false
+            }).setView([-1.2921, 36.8219], 4); // Centered roughly on Africa/Global view
+
+            // Dark CartoDB basemap
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                maxZoom: 19,
+            }).addTo(map);
+
+            // Custom Icon
+            const pulseIcon = L.divIcon({
+                className: 'custom-div-icon',
+                html: `<div class="relative flex h-4 w-4">
+                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-500 opacity-75"></span>
+                          <span class="relative inline-flex rounded-full h-4 w-4 bg-amber-600 border-2 border-white/20"></span>
+                       </div>`,
+                iconSize: [16, 16],
+                iconAnchor: [8, 8]
+            });
+
+            // Nodes
+            const nodes = [
+                { coords: [-1.2921, 36.8219], name: "Nairobi HQ" },
+                { coords: [40.7128, -74.0060], name: "NYC Relay" },
+                { coords: [35.6762, 139.6503], name: "Tokyo Hub" },
+                { coords: [51.5074, -0.1278], name: "London Node" }
+            ];
+
+            nodes.forEach(node => {
+                L.marker(node.coords, { icon: pulseIcon })
+                    .addTo(map)
+                    .bindPopup(`<div class="font-space font-bold text-amber-900">${node.name}</div><div class="text-[10px] text-gray-500 font-mono">Status: ACTIVE</div>`);
+            });
+
+            L.control.zoom({ position: 'bottomright' }).addTo(map);
+
+            // Fix map rendering issue if container is hidden initially (though not in this layout, good practice)
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 1000);
+        }
+
+        // Initialize everything on load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderAdmins();
+            // Small delay to ensure containers have dimensions
+            setTimeout(() => {
+                initGlobe();
+                initMap();
+            }, 100);
+        });
+    </script>
+</body>
+
+</html>
