@@ -1,0 +1,22 @@
+{
+    "name": "Epsilon Earth Global Intelligence",
+    "short_name": "Epsilon Earth",
+    "description": "Advanced Earth monitoring and global intelligence dashboard.",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#1a1412",
+    "theme_color": "#8b5e3c",
+    "orientation": "any",
+    "icons": [
+        {
+            "src": "ep-earth-lg.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "ep-earth-lg.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}
